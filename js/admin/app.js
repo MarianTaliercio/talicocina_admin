@@ -8,6 +8,7 @@ function initAdmin(){
   renderRecipeTable();
   renderPromoTable();
   renderUsersTable();
+  renderSubs();
 
   renderWAPreview();
 

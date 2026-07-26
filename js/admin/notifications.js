@@ -2,7 +2,8 @@
 // ══════════════════════════════════════════
 function buildWAMsg(customMsg){
   const dest=document.getElementById('wa-dest')?.value||'all';
-  const targetUsers=dest==='all'?users.filter(u=>u.status==='activo'):users.filter(u=>u.status==='activo'&&u.plan===dest);
+  // Los planes y estados viven en subscriptions; la notificación simulada usa los perfiles cargados.
+  const targetUsers = users;
   const weekRecipes=recipes.slice(-4).map(r=>r.name);
   const list=weekRecipes.length?weekRecipes.map(r=>`• ${r}`).join('\n'):'• Mirá las novedades en la app';
   const base=customMsg||`¡Hola! 👋\n\n🍳 *Tu menú semanal de Tali Cocina está listo*\n\nEsta semana te recomendamos:\n${list}\n\n📋 Entrá a la app para ver tu lista de compras con cantidades.\n🏦 ¡Revisá las promos bancarias de tu zona!\n\n_Tali Cocina · @talicocina_`;

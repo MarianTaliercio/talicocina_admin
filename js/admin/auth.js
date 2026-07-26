@@ -1,29 +1,23 @@
-// AUTH
-async function adminLogin(){
-  const u=document.getElementById('adm-user').value;
-  const p=document.getElementById('adm-pass').value;
-  const btn=document.getElementById('adm-login-btn');
-  btn.innerHTML='<span class="spinner"></span> Ingresandoâ€¦';btn.disabled=true;
-  setTimeout(()=>{
-    if(u==='admin'&&p==='tali2025'){
-      sessionStorage.setItem('tc_admin_auth','1');
-      document.getElementById('admin-login-screen').style.display='none';
-      document.getElementById('admin-panel').style.display='block';
-      initAdmin();
-    } else {
-      toast('Usuario o contraseña incorrectos');
-    }
-    btn.textContent='Ingresar al panel';btn.disabled=false;
-  },700);
+async function adminLogin() {
+  const user = document.getElementById('adm-user').value.trim().toLowerCase();
+  const password = document.getElementById('adm-pass').value;
+  if (!user || !password) return toast('Ingresa usuario y contrasena.');
+  sessionStorage.setItem('tc_admin_user', user);
+  sessionStorage.setItem('tc_admin_password', password);
+  try { await adminRequest('login'); } catch (error) { sessionStorage.removeItem('tc_admin_user'); sessionStorage.removeItem('tc_admin_password'); return toast(error.message || 'Usuario o contrasena incorrectos.'); }
+  sessionStorage.setItem('tc_admin_auth', '1');
+  document.getElementById('admin-login-screen').style.display = 'none';
+  document.getElementById('admin-panel').style.display = 'block';
+  await loadAdminSupabaseData();
+  initAdmin();
 }
 
-function adminLogout(){
-  if(!confirm('¿Cerrar sesion?')) return;
+async function adminLogout() {
+  if (!confirm('Cerrar sesion?')) return;
   sessionStorage.removeItem('tc_admin_auth');
-  document.getElementById('admin-panel').style.display='none';
-  document.getElementById('admin-login-screen').style.display='block';
-  document.getElementById('adm-user').value='';
-  document.getElementById('adm-pass').value='';
+  sessionStorage.removeItem('tc_admin_user'); sessionStorage.removeItem('tc_admin_password');
+  document.getElementById('admin-panel').style.display = 'none';
+  document.getElementById('admin-login-screen').style.display = 'block';
   closeSidebar();
-  toast('SesiÃ³n cerrada');
+  toast('Sesion cerrada');
 }

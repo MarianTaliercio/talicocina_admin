@@ -21,6 +21,50 @@ function renderRecipeTable(){
   }).join('')||`<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--ink4)">Sin recetas. Agregá la primera.</td></tr>`;
 }
 
+function renderIngredientCategoryOptions(selectedName = '') {
+  const select = document.getElementById('ingr-category');
+  if (!select) return;
+  const active = ingredientCategories.filter(item => item.is_active !== false);
+  select.innerHTML = active.map(item => `<option value="${item.name}">${item.name}</option>`).join('');
+  const preferred = active.find(item => item.name === selectedName)?.name
+    || active.find(item => item.name === 'Almacén')?.name
+    || active[0]?.name || '';
+  select.value = preferred;
+}
+
+async function addIngredientCategory() {
+  const input = document.getElementById('new-ingr-category');
+  const name = input.value.trim();
+  if (!name) return toast('Escribí el nombre de la categoría');
+  const existing = ingredientCategories.find(item => item.name.toLocaleLowerCase('es-AR') === name.toLocaleLowerCase('es-AR'));
+  if (existing) {
+    renderIngredientCategoryOptions(existing.name);
+    input.value = '';
+    return toast('Esa categoría ya existe');
+  }
+  try {
+    const { data } = await adminRequest('ingredient_category_upsert', { name, sort_order: ingredientCategories.length * 10 + 10 });
+    ingredientCategories.push(data);
+    ingredientCategories.sort((a, b) => Number(a.sort_order) - Number(b.sort_order) || a.name.localeCompare(b.name));
+    renderIngredientCategoryOptions(data.name);
+    input.value = '';
+    toast('Categoría agregada');
+  } catch (error) { toast(error.message); }
+}
+
+async function deleteIngredientCategory() {
+  const select = document.getElementById('ingr-category');
+  const category = ingredientCategories.find(item => item.name === select.value);
+  if (!category) return;
+  if (!confirm(`¿Eliminar "${category.name}" del selector? Los ingredientes ya guardados conservarán esa categoría.`)) return;
+  try {
+    await adminRequest('ingredient_category_delete', { id: category.id });
+    ingredientCategories = ingredientCategories.filter(item => item.id !== category.id);
+    renderIngredientCategoryOptions();
+    toast('Categoría eliminada del selector');
+  } catch (error) { toast(error.message); }
+}
+
 async function delRecipe(id){
 
   if(!confirm('¿Eliminar esta receta?')) return;
@@ -49,16 +93,20 @@ async function delRecipe(id){
 
 function openRecipeForm(id){
   editRid=id; ingrTags=[]; pasosTags=[];
-  ['rf-name','rf-yt','rf-cals'].forEach(fid=>document.getElementById(fid).value='');
+  ['rf-name','rf-yt','rf-cals','rf-duration','rf-allergens','rf-dietary-tags'].forEach(fid=>document.getElementById(fid).value='');
   document.getElementById('rf-porciones').value='2';
   document.getElementById('rf-yt-prev').innerHTML='';
   document.getElementById('mo-recipe-title').textContent=id?'Editar receta':'Nueva receta';
+  renderIngredientCategoryOptions();
   renderTagsUI('ingr'); renderTagsUI('pasos');
   if(id){
     const r=recipes.find(x=>x.id===id);if(!r) return;
     document.getElementById('rf-name').value=r.name||'';
     document.getElementById('rf-yt').value=r.ytUrl||'';
     document.getElementById('rf-cals').value=r.cals||'';
+    document.getElementById('rf-duration').value=r.durationMinutes||'';
+    document.getElementById('rf-allergens').value=(r.allergens||[]).join(', ');
+    document.getElementById('rf-dietary-tags').value=(r.dietaryTags||[]).join(', ');
     document.getElementById('rf-porciones').value=r.porciones||2;
     ingrTags=[...(r.ingredientes||[]).map(i=>({...i}))];
     pasosTags=[...(r.pasos||[])];
@@ -75,7 +123,7 @@ function handleTag(e, type){
     if(!val) return;
     if(type==='ingr'){
       const p=val.split(',').map(s=>s.trim());
-      ingrTags.push({n:p[0]||val, c:p[1]||'1', u:p[2]||'u'});
+      ingrTags.push({n:p[0]||val, c:p[1]||'1', u:p[2]||'u', category:p[3]||document.getElementById('ingr-category')?.value||''});
     } else {
       pasosTags.push(val);
     }
@@ -96,6 +144,10 @@ function renderTagsUI(type){
   arr.forEach((t,i)=>{
     const div=document.createElement('div');
     div.className=`tag ${isIngr?'tag-green':'tag-blue'}`;
+    if(isIngr && t.category) {
+      div.dataset.category=t.category;
+      div.title=`Categoría: ${t.category}`;
+    }
     div.innerHTML=isIngr
       ?`${t.n} <span style="opacity:.65">${t.c} ${t.u}</span><button onclick="rmTag('${type}',${i})">×</button>`
       :`<span style="opacity:.6;margin-right:3px">${i+1}.</span>${t.length>50?t.slice(0,50)+'…':t}<button onclick="rmTag('${type}',${i})">×</button>`;
@@ -140,7 +192,8 @@ async function saveRecipe(){
     ingrTags.push({
       n:p[0],
       c:p[1]||'1',
-      u:p[2]||'u'
+      u:p[2]||'u',
+      category:p[3]||document.getElementById('ingr-category')?.value||''
     });
   }
 
@@ -155,9 +208,12 @@ async function saveRecipe(){
     ytUrl,
     ytId,
     cals:parseInt(document.getElementById('rf-cals').value)||0,
+    durationMinutes:parseInt(document.getElementById('rf-duration').value)||0,
     porciones:parseInt(document.getElementById('rf-porciones').value)||2,
     ingredientes:[...ingrTags],
-    pasos:[...pasosTags]
+    pasos:[...pasosTags],
+    allergens:document.getElementById('rf-allergens').value.split(',').map(value=>value.trim()).filter(Boolean),
+    dietaryTags:document.getElementById('rf-dietary-tags').value.split(',').map(value=>value.trim()).filter(Boolean)
   };
 
   try{
@@ -185,7 +241,9 @@ async function saveRecipe(){
       recipes.push(recipe);
     }
 
-    await upsertRecipeToSupabase(recipe);
+    recipe = await upsertRecipeToSupabase(recipe);
+    if(editRid) recipes[recipes.findIndex(r => r.id === editRid)] = recipe;
+    else recipes[recipes.length - 1] = recipe;
     
     
 
@@ -211,7 +269,7 @@ async function saveRecipe(){
 
     console.error(err);
 
-    toast('Error al guardar en Supabase');
+    toast(`Error al guardar: ${err.message || 'revisar permisos de Supabase'}`);
   }
 }
 

@@ -1,6 +1,7 @@
 // PROMOS
 // ══════════════════════════════════════════
 function renderPromoTable(){
+  renderPromoEntities();
   document.getElementById('promo-tbody').innerHTML=promos.map(p=>{
     const s=STORES[p.super]||{name:p.super,color:'#555'};
     return `<tr>
@@ -18,13 +19,59 @@ function renderPromoTable(){
   }).join('')||`<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--ink4)">Sin promos. Agregá la primera.</td></tr>`;
 }
 
+function renderPromoEntities() {
+  const bankSelect = document.getElementById('pf-banco');
+  const storeSelect = document.getElementById('pf-super');
+  if (bankSelect) bankSelect.innerHTML = banks.map(item => `<option value="${item.name}">${item.name}</option>`).join('');
+  if (storeSelect) storeSelect.innerHTML = supermarkets.map(item => `<option value="${item.name}">${item.name}</option>`).join('');
+  const bankList = document.getElementById('entity-banks-list');
+  const storeList = document.getElementById('entity-stores-list');
+  if (bankList) bankList.innerHTML = banks.map(item => entityChip('banks', item)).join('');
+  if (storeList) storeList.innerHTML = supermarkets.map(item => entityChip('supermarkets', item)).join('');
+}
+
+function entityChip(table, item) {
+  return `<span class="chip on" style="display:inline-flex;align-items:center;gap:6px">${item.name}<button type="button" title="Renombrar" onclick="renamePromoEntity('${table}','${item.id}')" style="border:0;background:transparent;cursor:pointer">✎</button><button type="button" title="Eliminar" onclick="deletePromoEntity('${table}','${item.id}')" style="border:0;background:transparent;cursor:pointer">×</button></span>`;
+}
+
+async function addPromoEntity(table) {
+  const input = document.getElementById(table === 'banks' ? 'entity-bank-name' : 'entity-store-name');
+  const name = input.value.trim();
+  if (!name) return toast('Escribí un nombre.');
+  try { await adminRequest('promo_entity_upsert', { table, name }); }
+  catch (error) { return toast(error.message || 'No se pudo agregar.'); }
+  input.value = '';
+  await loadAdminSupabaseData(); renderPromoEntities(); toast(table === 'banks' ? 'Banco agregado' : 'Comercio agregado');
+}
+
+async function renamePromoEntity(table, id) {
+  const collection = table === 'banks' ? banks : supermarkets;
+  const item = collection.find(entity => entity.id === id);
+  if (!item) return;
+  const name = prompt('Nuevo nombre:', item.name)?.trim();
+  if (!name || name === item.name) return;
+  try { await adminRequest('promo_entity_upsert', { table, id, name }); }
+  catch (error) { return toast(error.message || 'No se pudo renombrar.'); }
+  await loadAdminSupabaseData(); renderPromoTable(); toast('Nombre actualizado');
+}
+
+async function deletePromoEntity(table, id) {
+  const collection = table === 'banks' ? banks : supermarkets;
+  const item = collection.find(entity => entity.id === id);
+  if (!item || !confirm(`¿Eliminar ${item.name}?`)) return;
+  try { await adminRequest('promo_entity_delete', { table, id }); }
+  catch (error) { return toast(error.message || 'No se pudo eliminar.'); }
+  await loadAdminSupabaseData(); renderPromoTable(); toast('Elemento eliminado');
+}
+
 function openPromoForm(id){
   editPid=id;
+  renderPromoEntities();
   ['pf-desc','pf-disc','pf-dias','pf-vigencia'].forEach(fid=>document.getElementById(fid).value='');
   document.getElementById('mo-promo-title').textContent=id?'Editar promo':'Nueva promo';
   if(id){
     const p=promos.find(x=>x.id===id);if(!p) return;
-    document.getElementById('pf-super').value=p.super||'coto';
+    document.getElementById('pf-super').value=p.super||'';
     document.getElementById('pf-banco').value=p.banco||'';
     document.getElementById('pf-desc').value=p.desc||'';
     document.getElementById('pf-disc').value=p.disc||'';
@@ -46,10 +93,14 @@ async function savePromo(){
   const data={
     super:document.getElementById('pf-super').value,
     banco:document.getElementById('pf-banco').value,
+    name: desc,
     desc,
     disc:parseInt(document.getElementById('pf-disc').value)||0,
     dias:document.getElementById('pf-dias').value.trim(),
-    vigencia:document.getElementById('pf-vigencia').value.trim()
+    vigencia:document.getElementById('pf-vigencia').value.trim(),
+    validFrom: new Date().toISOString().slice(0,10),
+    validTo: new Date(Date.now() + 30 * 86400000).toISOString().slice(0,10),
+    weekdays: []
   };
 
   try{
@@ -95,7 +146,7 @@ async function savePromo(){
   }catch(err){
 
     console.error(err);
-    toast('Error al guardar en Supabase');
+    toast(`Error al guardar: ${err.message || 'revisar permisos de Supabase'}`);
 
   }
 }

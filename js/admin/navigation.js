@@ -6,6 +6,8 @@ const viewMeta={
   importar:{title:'Importar JSON',sub:'Carga masiva de recetas',actions:''},
   usuarios:{title:'Usuarios',sub:'Gestión de usuarios registrados',actions:''},
   suscripciones:{title:'Suscripciones',sub:'Estado de pagos y planes',actions:''},
+  codigos:{title:'Codigos de acceso',sub:'Profesionales, beneficios y altas Premium',actions:''},
+  alimentacion:{title:'Alergias y preferencias',sub:'Opciones visibles en el perfil de usuarios',actions:''},
   promos:{title:'Promos bancarias',sub:'Descuentos por banco y supermercado',actions:''},
   notificaciones:{title:'Notificaciones WhatsApp',sub:'Envíos automáticos al publicar recetas',actions:''},
 };
@@ -19,7 +21,9 @@ function goView(name,el){
   document.getElementById('topbar-sub').textContent=m.sub||'';
   if(name==='recetas') renderRecipeTable();
   if(name==='usuarios') renderUsersTable();
-  if(name==='suscripciones') renderSubs();
+  if(name==='suscripciones') { renderSubs(); renderPlanManager(); }
+  if(name==='codigos') renderReferralCodes();
+  if(name==='alimentacion') renderFoodOptions();
   if(name==='promos') renderPromoTable();
   if(name==='notificaciones') renderNotificaciones();
   if(name==='dashboard') renderDashboard();

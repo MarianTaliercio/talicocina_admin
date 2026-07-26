@@ -1,27 +1,47 @@
-// DASHBOARD
-// ══════════════════════════════════════════
 function renderDashboard(){
-  const active=users.filter(u=>u.status==='activo').length;
-  const mensual=users.filter(u=>u.plan==='mensual').length;
-  const anual=users.filter(u=>u.plan==='anual').length;
-  const mrr=mensual*1990+anual*Math.round(16900/12);
-  document.getElementById('dash-stats').innerHTML=`
-    <div class="stat-card"><div class="stat-icon">🍽</div><div class="stat-n">${recipes.length}</div><div class="stat-label">Recetas cargadas</div></div>
-    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-n">${active}</div><div class="stat-label">Usuarios activos</div><div class="stat-trend up">↑ ${users.length} registrados total</div></div>
-    <div class="stat-card"><div class="stat-icon">💳</div><div class="stat-n">${mensual+anual}</div><div class="stat-label">Suscriptores</div><div class="stat-trend up">${anual} anuales · ${mensual} mensuales</div></div>
-    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-n">$${mrr.toLocaleString('es-AR')}</div><div class="stat-label">Ingreso mensual estimado</div></div>
-  `;
-  document.getElementById('dash-recipes').innerHTML=recipes.slice(0,4).map(r=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:.6rem 0;border-bottom:1px solid var(--line)">
-      <div style="width:36px;height:36px;border-radius:8px;background:var(--g5);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🍽</div>
-      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div><div style="font-size:11px;color:var(--ink3)">${(r.ingredientes||[]).length} ingredientes${r.cals?' · '+r.cals+' kcal':''}</div></div>
-    </div>`).join('')||'<div class="empty"><div class="empty-icon">🍽</div><p>Sin recetas</p></div>';
-  document.getElementById('dash-users').innerHTML=users.slice(0,4).map(u=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:.6rem 0;border-bottom:1px solid var(--line)">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--g4);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:var(--g1);flex-shrink:0">${(u.name||'U').slice(0,2).toUpperCase()}</div>
-      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500;color:var(--ink)">${u.name} ${u.apellido}</div><div style="font-size:11px;color:var(--ink3)">${u.email}</div></div>
-      <span class="badge ${u.status==='activo'?'badge-green':'badge-red'}">${u.plan}</span>
-    </div>`).join('')||'<div class="empty"><p>Sin usuarios</p></div>';
-}
+  const active = subscriptions.filter(subscription => subscription.status === 'active').length;
+  const openReports = promotionReports.filter(item => item.status === 'open');
+  document.getElementById('dash-stats').innerHTML = [
+    ['🍽', recipes.length, 'Recetas cargadas'],
+    ['👥', users.length, 'Usuarios registrados'],
+    ['💳', active, 'Suscripciones activas'],
+    ['🏦', promos.length, 'Promociones activas'],
+    ['💬', recipeFeedback.length, 'Respuestas sobre recetas'],
+    ['⚑', openReports.length, 'Promociones reportadas']
+  ].map(([icon, value, label]) => `<div class="stat-card"><div class="stat-icon">${icon}</div><div class="stat-n">${value}</div><div class="stat-label">${label}</div></div>`).join('');
 
-// ══════════════════════════════════════════
+  const recipeName = id => recipes.find(recipe => recipe.id === id)?.name || 'Receta';
+  const countsBy = (items, getId) => Object.entries(items.reduce((counts, item) => {
+    const id = getId(item);
+    if (id) counts[id] = (counts[id] || 0) + 1;
+    return counts;
+  }, {})).sort((a, b) => b[1] - a[1]);
+  const chosenRanking = countsBy(recipeSelections, item => item.recipe_id || item.weekly_menu_recipes?.recipe_id);
+  const likes = countsBy(recipeFeedback.filter(item => item.outcome === 'liked'), item => item.recipe_id);
+  const favorites = countsBy(recipeFavorites, item => item.recipe_id);
+  const likedRanking = [...new Set([...likes.map(item => item[0]), ...favorites.map(item => item[0])])]
+    .map(id => [id, likes.find(item => item[0] === id)?.[1] || 0, favorites.find(item => item[0] === id)?.[1] || 0])
+    .sort((a, b) => (b[1] + b[2]) - (a[1] + a[2]));
+  const rankingEmpty = '<div class="empty"><p>Todavía no hay actividad suficiente.</p></div>';
+  document.getElementById('dash-most-chosen').innerHTML = chosenRanking.length ? chosenRanking.slice(0, 8).map(([id, count], index) =>
+    `<div class="ranking-row"><span class="ranking-position">${index + 1}</span><strong>${recipeName(id)}</strong><span>${count} elección${count === 1 ? '' : 'es'}</span></div>`
+  ).join('') : rankingEmpty;
+  document.getElementById('dash-most-liked').innerHTML = likedRanking.length ? likedRanking.slice(0, 8).map(([id, likeCount, favoriteCount], index) =>
+    `<div class="ranking-row"><span class="ranking-position">${index + 1}</span><strong>${recipeName(id)}</strong><span>😍 ${likeCount} · ♥ ${favoriteCount}</span></div>`
+  ).join('') : rankingEmpty;
+
+  document.getElementById('dash-recipes').innerHTML = recipes.slice(0,4).map(recipe =>
+    `<div style="padding:.6rem 0;border-bottom:1px solid var(--line)"><strong>${recipe.name}</strong><div style="font-size:11px;color:var(--ink3)">${recipe.ingredientes.length} ingredientes · ${recipe.cals || '—'} kcal</div></div>`
+  ).join('') || '<div class="empty"><p>Sin recetas</p></div>';
+
+  document.getElementById('dash-users').innerHTML = users.slice(0,4).map(user =>
+    `<div style="padding:.6rem 0;border-bottom:1px solid var(--line)"><strong>${user.name || 'Usuario'} ${user.apellido || ''}</strong><div style="font-size:11px;color:var(--ink3)">${user.email}</div></div>`
+  ).join('') || '<div class="empty"><p>Sin usuarios</p></div>';
+
+  if (openReports.length) {
+    document.getElementById('dash-users').insertAdjacentHTML('beforeend',
+      `<div style="margin-top:1rem;font-weight:700">Reportes pendientes</div>${openReports.slice(0,4).map(item =>
+        `<div style="padding:.55rem 0;border-bottom:1px solid var(--line)"><strong>${item.promotions?.name || 'Promoción'}</strong><div style="font-size:11px;color:var(--ink3)">${item.reason}</div></div>`
+      ).join('')}`);
+  }
+}

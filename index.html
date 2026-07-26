@@ -18,7 +18,7 @@
       <div class="login-sub">Tali Cocina · Acceso restringido</div>
       <div class="form-group">
         <label class="form-label">Usuario admin</label>
-        <input class="form-input" id="adm-user" placeholder="admin" value="admin">
+        <input class="form-input" id="adm-user" autocomplete="username" placeholder="admin" value="admin">
       </div>
       <div class="form-group">
         <label class="form-label">Contraseña</label>
@@ -64,6 +64,9 @@
     <div class="nav-item" onclick="goView('suscripciones',this)" id="ni-suscripciones">
       <div class="nav-item-icon">💳</div> Suscripciones
     </div>
+    <div class="nav-section">Crecimiento</div>
+    <div class="nav-item" onclick="goView('codigos',this)" id="ni-codigos"><div class="nav-item-icon">#</div> Codigos de acceso</div>
+    <div class="nav-item" onclick="goView('alimentacion',this)" id="ni-alimentacion"><div class="nav-item-icon">🥗</div> Alimentación</div>
     <div class="nav-section">Comercial</div>
     <div class="nav-item" onclick="goView('promos',this)" id="ni-promos">
       <div class="nav-item-icon">🏦</div> Promos bancarias
@@ -102,6 +105,16 @@
     <!-- ── DASHBOARD ── -->
     <div class="view on" id="view-dashboard">
       <div class="stats-grid" id="dash-stats"></div>
+      <div class="dashboard-ranking-grid">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Comidas más elegidas</div><div class="card-sub">Según las planificaciones de los usuarios</div></div></div>
+          <div id="dash-most-chosen"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Recetas más gustadas</div><div class="card-sub">Me gusta y favoritos de los usuarios</div></div></div>
+          <div id="dash-most-liked"></div>
+        </div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
         <div class="card">
           <div class="card-header"><div><div class="card-title">Recetas recientes</div><div class="card-sub">Últimas cargadas</div></div></div>
@@ -145,8 +158,8 @@
     <span class="json-str">"cals"</span>: <span class="json-num">540</span>,
     <span class="json-str">"porciones"</span>: <span class="json-num">2</span>,
     <span class="json-str">"ingredientes"</span>: <span class="json-kw">[</span>
-      <span class="json-kw">{</span> <span class="json-str">"n"</span>: <span class="json-str">"Carne milanesa"</span>, <span class="json-str">"c"</span>: <span class="json-str">"500"</span>, <span class="json-str">"u"</span>: <span class="json-str">"g"</span> <span class="json-kw">}</span>,
-      <span class="json-kw">{</span> <span class="json-str">"n"</span>: <span class="json-str">"Pan rallado"</span>, <span class="json-str">"c"</span>: <span class="json-str">"100"</span>, <span class="json-str">"u"</span>: <span class="json-str">"g"</span> <span class="json-kw">}</span>
+      <span class="json-kw">{</span> <span class="json-str">"n"</span>: <span class="json-str">"Carne milanesa"</span>, <span class="json-str">"c"</span>: <span class="json-str">"500"</span>, <span class="json-str">"u"</span>: <span class="json-str">"g"</span>, <span class="json-str">"category"</span>: <span class="json-str">"Carnicería"</span> <span class="json-kw">}</span>,
+      <span class="json-kw">{</span> <span class="json-str">"n"</span>: <span class="json-str">"Pan rallado"</span>, <span class="json-str">"c"</span>: <span class="json-str">"100"</span>, <span class="json-str">"u"</span>: <span class="json-str">"g"</span>, <span class="json-str">"categoria"</span>: <span class="json-str">"Almacén"</span> <span class="json-kw">}</span>
     <span class="json-kw">]</span>,
     <span class="json-str">"pasos"</span>: <span class="json-kw">[</span>
       <span class="json-str">"Pasar la carne por huevo batido."</span>,
@@ -156,12 +169,12 @@
 <span class="json-kw">]</span></div>
         <div class="form-group">
           <label class="form-label">JSON de recetas</label>
-          <textarea class="json-area" id="json-import-area" placeholder='[{"name":"...","ytUrl":"...","cals":0,"porciones":2,"ingredientes":[{"n":"...","c":"1","u":"g"}],"pasos":["..."]}]'></textarea>
+          <textarea class="json-area" id="json-import-area" placeholder='[{"name":"...","ytUrl":"...","cals":0,"porciones":2,"ingredientes":[{"n":"Bondiola","c":"500","u":"g","category":"Carnicería"}],"pasos":["..."]}]'></textarea>
         </div>
         <div style="display:flex;gap:10px;align-items:center">
           <button class="btn btn-primary" onclick="importJSON()" id="import-btn">Importar recetas</button>
           <button class="btn btn-outline" onclick="document.getElementById('json-import-area').value=''">Limpiar</button>
-          <button class="btn btn-outline" onclick="loadJSONDemo()">Cargar ejemplo demo</button>
+          <button class="btn btn-outline" onclick="loadJSONDemo()">Cargar 6 recetas de prueba</button>
           <div id="import-result" style="font-size:13px;color:var(--g2);margin-left:8px"></div>
         </div>
         <div class="prog-bar" id="import-prog-wrap" style="display:none"><div class="prog-fill" id="import-prog" style="width:0%"></div></div>
@@ -185,6 +198,7 @@
     <!-- ── SUSCRIPCIONES ── -->
     <div class="view" id="view-suscripciones">
       <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)" id="subs-stats"></div>
+      <div class="card"><div class="card-header"><div><div class="card-title">Planes disponibles</div><div class="card-sub">Modificá precio, moneda, período y disponibilidad.</div></div></div><div id="plans-admin-body"></div></div>
       <div class="card">
         <div class="card-header"><div class="card-title">Detalle de suscripciones</div></div>
         <div class="table-wrap">
@@ -197,7 +211,26 @@
     </div>
 
     <!-- ── PROMOS ── -->
+    <div class="view" id="view-codigos">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Codigos de profesionales y beneficios</div><div class="card-sub">Premium para quien use un codigo activo</div></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Codigo</label><input class="form-input" id="rc-code" placeholder="NUTRI-ANA"></div><div class="form-group"><label class="form-label">Titular / profesional</label><input class="form-input" id="rc-owner" placeholder="Lic. Ana Perez"></div></div>
+        <div class="form-group"><label class="form-label">Email autorizado para el portal profesional</label><input class="form-input" id="rc-email" type="email" placeholder="nutricionista@email.com"><div class="form-hint">El nutricionista deberá registrarse en su portal con este mismo email.</div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Origen</label><select class="form-input" id="rc-source"><option value="professional">Profesional</option><option value="benefit">Beneficio</option></select></div><div class="form-group"><label class="form-label">Maximo de usos</label><input class="form-input" id="rc-max" type="number" min="1" placeholder="Sin limite"></div></div>
+        <div class="form-group"><label class="form-label">Descuento sobre Premium</label><input class="form-input" id="rc-discount" type="number" min="0" max="100" step="1" placeholder="Ej: 25"><div class="form-hint">Ingresá un porcentaje entre 0 y 100.</div></div>
+        <div class="form-group"><label class="form-label">Recetas elegidas por el profesional</label><select class="form-input" id="rc-recipes" multiple size="5"></select><div class="form-hint">Manten Ctrl/Cmd para elegir varias recetas.</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="rc-save-btn" onclick="saveReferralCode()">Crear codigo Premium</button><button class="btn btn-outline" id="rc-cancel-btn" style="display:none" onclick="cancelReferralEdit()">Cancelar edición</button></div>
+      </div>
+      <div class="card"><div id="referral-codes-list"></div></div>
+    </div>
     <div class="view" id="view-promos">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Bancos y comercios</div><div class="card-sub">Administrá bancos, billeteras, supermercados, pollerías, carnicerías y almacenes.</div></div></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nuevo banco o medio de pago</label><div style="display:flex;gap:8px"><input class="form-input" id="entity-bank-name" placeholder="Ej: Cuenta DNI"><button class="btn btn-primary" onclick="addPromoEntity('banks')">Agregar</button></div><div id="entity-banks-list" class="chips-row" style="margin-top:10px"></div></div>
+          <div class="form-group"><label class="form-label">Nuevo comercio</label><div style="display:flex;gap:8px"><input class="form-input" id="entity-store-name" placeholder="Ej: Pollería Don José"><button class="btn btn-primary" onclick="addPromoEntity('supermarkets')">Agregar</button></div><div id="entity-stores-list" class="chips-row" style="margin-top:10px"></div></div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-header">
           <div><div class="card-title">Promociones bancarias</div><div class="card-sub">Visibles para los usuarios según su banco</div></div>
@@ -205,11 +238,20 @@
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Supermercado</th><th>Banco</th><th>Descripción</th><th>%</th><th>Días</th><th>Vigencia</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Comercio</th><th>Banco</th><th>Descripción</th><th>%</th><th>Días</th><th>Vigencia</th><th>Acciones</th></tr></thead>
             <tbody id="promo-tbody"></tbody>
           </table>
         </div>
       </div>
+    </div>
+
+    <div class="view" id="view-alimentacion">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Opciones de alergias y preferencias</div><div class="card-sub">Administrá lo que los usuarios pueden elegir desde su Perfil.</div></div></div>
+        <div class="form-row"><div class="form-group"><label class="form-label">Tipo</label><select class="form-input" id="food-option-category"><option value="allergy">Alergia / restricción</option><option value="preference">Preferencia alimentaria</option></select></div><div class="form-group"><label class="form-label">Nueva opción</label><input class="form-input" id="food-option-name" placeholder="Ej: Soja"></div></div>
+        <button class="btn btn-primary" onclick="saveFoodOption()">+ Agregar opción</button>
+      </div>
+      <div class="card"><div id="food-options-list"></div></div>
     </div>
 
     <!-- ── NOTIFICACIONES ── -->
@@ -307,19 +349,41 @@
               <option value="6">6</option><option value="8">8</option>
             </select>
           </div>
+          <div class="form-group">
+            <label class="form-label">Minutos de preparación</label>
+            <input class="form-input" id="rf-duration" type="number" min="1" placeholder="Ej: 35">
+          </div>
         </div>
       </div>
     </div>
     <div class="form-group">
-      <label class="form-label">Ingredientes <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--ink3)">(nombre, cantidad, unidad — Enter para agregar)</span></label>
+      <label class="form-label">Ingredientes <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--ink3)">(nombre, cantidad, unidad, categoría — Enter para agregar)</span></label>
+      <div class="ingredient-category-tools">
+        <select class="form-input" id="ingr-category" aria-label="Categoría del ingrediente"></select>
+        <input class="form-input" id="new-ingr-category" placeholder="Nueva categoría">
+        <button class="btn btn-outline" type="button" onclick="addIngredientCategory()">Agregar</button>
+        <button class="btn btn-outline ingredient-category-delete" type="button" onclick="deleteIngredientCategory()">Eliminar elegida</button>
+      </div>
       <div class="tags-wrap" id="ingr-wrap" onclick="document.getElementById('ingr-inp').focus()">
-        <input class="tags-inp" id="ingr-inp" placeholder="Ej: Carne milanesa, 500, g" onkeydown="handleTag(event,'ingr')">
+        <input class="tags-inp" id="ingr-inp" placeholder="Ej: Bondiola, 500, g, Carnicería" onkeydown="handleTag(event,'ingr')">
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">Pasos de preparación <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--ink3)">(Enter para agregar cada paso)</span></label>
       <div class="tags-wrap" id="pasos-wrap" onclick="document.getElementById('pasos-inp').focus()">
         <input class="tags-inp" id="pasos-inp" placeholder="Ej: Batir los huevos…" onkeydown="handleTag(event,'pasos')">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Alérgenos que contiene</label>
+        <input class="form-input" id="rf-allergens" placeholder="Ej: Gluten, Lactosa, Huevo">
+        <div class="form-hint">Separalos por coma. Se ocultará la receta a quienes los tengan como restricción.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Etiquetas alimentarias</label>
+        <input class="form-input" id="rf-dietary-tags" placeholder="Ej: Vegetariano, Low carb">
+        <div class="form-hint">Ejemplos: Vegetariano, Vegano, Low carb, Sin azúcar, Alta proteína.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -334,22 +398,12 @@
   <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
     <div class="modal-title" id="mo-promo-title">Nueva promo</div>
     <div class="form-group">
-      <label class="form-label">Supermercado *</label>
-      <select class="form-input" id="pf-super">
-        <option value="coto">COTO</option><option value="toledo">Toledo</option>
-        <option value="disco">Disco</option><option value="vital">Vital</option>
-        <option value="changomas">Changomás</option><option value="la-anonima">La Anónima</option>
-        <option value="carrefour">Carrefour</option><option value="dia">Día%</option>
-      </select>
+      <label class="form-label">Comercio *</label>
+      <select class="form-input" id="pf-super"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Banco *</label>
-      <select class="form-input" id="pf-banco">
-        <option>Banco Nación</option><option>Banco Provincia</option><option>Santander</option>
-        <option>BBVA</option><option>HSBC</option><option>Galicia</option><option>Macro</option>
-        <option>ICBC</option><option>Patagonia</option><option>Naranja X</option>
-        <option>Mercado Pago</option><option>MODO</option>
-      </select>
+      <select class="form-input" id="pf-banco"></select>
     </div>
     <div class="form-group">
       <label class="form-label">Descripción *</label>
@@ -422,6 +476,9 @@
 <script src="js/admin/import-json.js"></script>
 <script src="js/admin/users.js"></script>
 <script src="js/admin/subscriptions.js"></script>
+<script src="js/admin/plans.js"></script>
+<script src="js/admin/food-options.js"></script>
+<script src="js/admin/referrals.js"></script>
 <script src="js/admin/promos.js"></script>
 <script src="js/admin/notifications.js"></script>
 <script src="js/admin/ui.js"></script>

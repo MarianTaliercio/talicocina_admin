@@ -6,9 +6,7 @@
     document.getElementById('admin-login-screen').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'block';
 
-    await loadAdminSupabaseData();
-
-    initAdmin();
+    await loadAdminSupabaseData(); initAdmin();
 
   }
 

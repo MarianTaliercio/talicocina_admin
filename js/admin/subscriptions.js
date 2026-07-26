@@ -1,26 +1,10 @@
-// SUSCRIPCIONES
-// ══════════════════════════════════════════
 function renderSubs(){
-  const activos=users.filter(u=>u.status==='activo').length;
-  const mensual=users.filter(u=>u.plan==='mensual').length;
-  const anual=users.filter(u=>u.plan==='anual').length;
-  const mrr=mensual*1990+anual*Math.round(16900/12);
-  document.getElementById('subs-stats').innerHTML=`
-    <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-n">${activos}</div><div class="stat-label">Suscriptores activos</div></div>
-    <div class="stat-card"><div class="stat-icon">💰</div><div class="stat-n">$${mrr.toLocaleString('es-AR')}</div><div class="stat-label">MRR estimado</div></div>
-    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-n">${anual?Math.round(anual/(activos||1)*100):0}%</div><div class="stat-label">Tasa plan anual</div></div>
-  `;
-  document.getElementById('subs-tbody').innerHTML=users.map(u=>{
-    const monto=u.plan==='mensual'?'$1.990 / mes':u.plan==='anual'?'$16.900 / año':'—';
-    return `<tr>
-      <td class="td-name">${u.name} ${u.apellido}<br><span style="font-size:11px;color:var(--ink3)">${u.email}</span></td>
-      <td><span class="badge ${u.plan==='anual'?'badge-purple':'badge-green'}">${u.plan}</span></td>
-      <td><span class="badge ${u.status==='activo'?'badge-green':'badge-red'}">${u.status}</span></td>
-      <td style="font-size:12px">${u.joined||'—'}</td>
-      <td style="font-size:12px">${u.nextBill||'—'}</td>
-      <td style="font-size:13px;font-weight:500">${monto}</td>
-    </tr>`;
-  }).join('');
+  const active = subscriptions.filter(subscription => ['pending','active','past_due','paused'].includes(subscription.status));
+  const mrr = active.reduce((total, subscription) => {
+    const plan = subscription.plans; if (!plan) return total;
+    const divisor = plan.billing_interval === 'yearly' ? 12 : plan.billing_interval === 'quarterly' ? 3 : 1;
+    return total + Number(plan.price || 0) / divisor;
+  }, 0);
+  document.getElementById('subs-stats').innerHTML = `<div class="stat-card"><div class="stat-icon">✅</div><div class="stat-n">${active.length}</div><div class="stat-label">Suscripciones vigentes</div></div><div class="stat-card"><div class="stat-icon">💰</div><div class="stat-n">$${mrr.toLocaleString('es-AR')}</div><div class="stat-label">MRR estimado</div></div><div class="stat-card"><div class="stat-icon">📊</div><div class="stat-n">${subscriptions.length}</div><div class="stat-label">Suscripciones totales</div></div>`;
+  document.getElementById('subs-tbody').innerHTML = subscriptions.map(subscription => { const plan = subscription.plans || {}; const user = subscription.users || {}; return `<tr><td class="td-name">${user.name || '—'} ${user.apellido || ''}<br><span style="font-size:11px;color:var(--ink3)">${user.email || ''}</span></td><td><span class="badge badge-blue">${plan.name || '—'}</span></td><td><span class="badge ${subscription.status === 'active' ? 'badge-green' : 'badge-amber'}">${subscription.status}</span></td><td style="font-size:12px">${subscription.started_at ? new Date(subscription.started_at).toLocaleDateString('es-AR') : '—'}</td><td style="font-size:12px">${subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString('es-AR') : '—'}</td><td style="font-size:13px;font-weight:500">${plan.price ? `${plan.currency || 'ARS'} ${Number(plan.price).toLocaleString('es-AR')}` : '—'}</td></tr>`; }).join('') || '<tr><td colspan="6" style="text-align:center;padding:2rem">Sin suscripciones</td></tr>';
 }
-
-// ══════════════════════════════════════════
